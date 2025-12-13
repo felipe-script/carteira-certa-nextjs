@@ -385,9 +385,6 @@ export function Dashboard() {
                 <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
                   <span className="text-muted-foreground">Usado do aporte:</span>{" "}
                   <span className="font-semibold tabular-nums">{formatBRL(calc.usedTotal)}</span>
-                  <span className="mx-2 text-muted-foreground">•</span>
-                  <span className="text-muted-foreground">Sobra:</span>{" "}
-                  <span className="font-semibold text-warning tabular-nums">{formatBRL(calc.leftover)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">Free: até {FREE_MAX_CLASSES} classes</Badge>

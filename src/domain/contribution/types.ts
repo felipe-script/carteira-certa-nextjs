@@ -19,7 +19,6 @@ export type ClassContributionResult = {
   contribution: number;
   totalAfter: number;
   usedTotal: number;
-  leftover: number;
   recommendations: ClassContributionRecommendation[];
   notes: string[];
 };

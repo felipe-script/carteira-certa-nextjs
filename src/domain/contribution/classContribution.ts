@@ -119,7 +119,6 @@ export function calculateClassContribution(input: {
       contribution,
       totalAfter,
       usedTotal: 0,
-      leftover: contribution,
       recommendations: [],
       notes: ["Adicione ao menos 1 classe de ativo."],
     };
@@ -132,7 +131,6 @@ export function calculateClassContribution(input: {
       contribution,
       totalAfter,
       usedTotal: 0,
-      leftover: contribution,
       recommendations: [],
       notes: ["Todas as classes estão marcadas como 'Ignorar'."],
     };
@@ -185,11 +183,11 @@ export function calculateClassContribution(input: {
   const planAmountsCents = new Map<ClassId, number>();
 
   if (totalDeficitCents <= 0) {
-    // já está no alvo (ou acima) -> distribuir conforme ideal (normalizado)
-    const extra = allocateCentsByWeights(contributionCents, deficits.map((d) => ({ id: d.id, weight: d.idealPctNormalized })));
-    for (const d of deficits) {
-      planAmountsCents.set(d.id, extra.get(d.id) ?? 0);
-    }
+    // Sem venda: se não existe déficit, qualquer compra empurra para longe do ideal.
+    // Portanto, não aloca nada.
+    notes.push(
+      "Não há classes abaixo do ideal para receber aporte sem venda."
+    );
   } else if (contributionCents <= totalDeficitCents) {
     // aporte não cobre todo déficit -> proporcional ao déficit
     const byDeficit = allocateCentsByWeights(contributionCents, deficits.map((d) => ({ id: d.id, weight: d.deficitCents })));
@@ -197,15 +195,13 @@ export function calculateClassContribution(input: {
       planAmountsCents.set(d.id, byDeficit.get(d.id) ?? 0);
     }
   } else {
-    // cobre o déficit + distribui sobra conforme ideal
+    // cobre o déficit e NÃO redistribui a sobra (sem venda / sem ultrapassar o ideal)
     for (const d of deficits) {
       planAmountsCents.set(d.id, d.deficitCents);
     }
-    const remainderCents = contributionCents - totalDeficitCents;
-    const extra = allocateCentsByWeights(remainderCents, deficits.map((d) => ({ id: d.id, weight: d.idealPctNormalized })));
-    for (const d of deficits) {
-      planAmountsCents.set(d.id, (planAmountsCents.get(d.id) ?? 0) + (extra.get(d.id) ?? 0));
-    }
+    notes.push(
+      "O aporte excede o déficit total. Para evitar ultrapassar o ideal sem venda, parte do aporte não é alocada."
+    );
   }
 
   const recommendations = deficits
@@ -219,14 +215,12 @@ export function calculateClassContribution(input: {
 
   const usedTotalCents = recommendations.reduce((sum, r) => sum + toCents(r.amount), 0);
   const usedTotal = fromCents(usedTotalCents);
-  const leftover = fromCents(contributionCents - usedTotalCents);
 
   return {
     totalHave,
     contribution,
     totalAfter,
     usedTotal,
-    leftover,
     recommendations,
     notes,
   };
