@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -49,6 +50,30 @@ function parseNumberBR(input: string): number {
     .replace(",", ".");
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : 0;
+}
+
+function PercentInput(props: {
+  value: number;
+  onChange: (next: number) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <div className="relative">
+      <Input
+        type="number"
+        inputMode="decimal"
+        className="pl-0 text-right tabular-nums"
+        value={String(Number.isFinite(props.value) ? props.value : 0)}
+        min={0}
+        step={0.01}
+        onChange={(e) => props.onChange(Number(e.target.value || 0))}
+        aria-label={props.ariaLabel}
+      />
+      <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+        %
+      </span>
+    </div>
+  );
 }
 
 export function Dashboard() {
@@ -108,10 +133,10 @@ export function Dashboard() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
-          <div>
-            <div className="text-lg font-semibold">Carteira Certa</div>
+          <div className="space-y-1">
+            <div className="text-lg font-semibold leading-none">Carteira Certa</div>
             <div className="text-sm text-muted-foreground">
-              Modelo Free: aporte por classe (estilo planilha)
+              Preencha os campos e veja quanto aportar (sem vender).
             </div>
           </div>
 
@@ -127,37 +152,56 @@ export function Dashboard() {
             <CardHeader>
               <CardTitle>Rebalanceador por Classe</CardTitle>
               <CardDescription>
-                Informe % ideal e % atual. O sistema sugere quanto aportar por classe.
+                Tudo aqui é editável (classe, % ideal, % atual, valores). Use “Ignorar” se não quer aportar naquela classe.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm text-muted-foreground">Quanto tenho (R$)</label>
-                  <Input
-                    inputMode="decimal"
-                    value={String(state.totalHave ?? 0)}
-                    onChange={(e) =>
-                      setState((s) => ({
-                        ...s,
-                        totalHave: parseNumberBR(e.target.value),
-                      }))
-                    }
-                  />
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <Label className="text-muted-foreground" htmlFor="totalHave">
+                    Quanto tenho (R$)
+                  </Label>
+                  <div className="mt-2">
+                    <Input
+                      id="totalHave"
+                      inputMode="decimal"
+                      placeholder="Ex.: 9019,12"
+                      value={String(state.totalHave ?? 0)}
+                      onChange={(e) =>
+                        setState((s) => ({
+                          ...s,
+                          totalHave: parseNumberBR(e.target.value),
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Total da carteira hoje.
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Novo aporte (R$)</label>
-                  <Input
-                    inputMode="decimal"
-                    value={contribution}
-                    onChange={(e) => setContribution(e.target.value)}
-                  />
+
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <Label className="text-muted-foreground" htmlFor="contribution">
+                    Novo aporte (R$)
+                  </Label>
+                  <div className="mt-2">
+                    <Input
+                      id="contribution"
+                      inputMode="decimal"
+                      placeholder="Ex.: 1500,00"
+                      value={contribution}
+                      onChange={(e) => setContribution(e.target.value)}
+                    />
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Quanto você vai investir agora.
+                  </div>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="text-sm text-muted-foreground">
-                  Total após aporte: <span className="text-foreground">{formatBRL(calc.totalAfter)}</span>
+                <div className="text-sm text-amber-50">
+                  Total após aporte: <span className="text-success">{formatBRL(calc.totalAfter)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge
@@ -175,22 +219,110 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              {/* Mobile: cards (sem scroll horizontal) */}
+              <div className="space-y-3 md:hidden">
+                {state.classes.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                    Adicione uma classe para começar.
+                  </div>
+                ) : (
+                  state.classes.map((c) => {
+                    const amount = amountById.get(c.id) ?? 0;
+                    return (
+                      <div key={c.id} className="rounded-xl border border-border bg-card p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <Label className="text-muted-foreground" htmlFor={`name-${c.id}`}>
+                              Classe
+                            </Label>
+                            <div className="mt-2">
+                              <Input
+                                id={`name-${c.id}`}
+                                value={c.name}
+                                placeholder="Ex.: Ações do Brasil"
+                                onChange={(e) => updateClass(c.id, { name: e.target.value })}
+                              />
+                            </div>
+                          </div>
+
+                          <Button
+                            variant="outline"
+                            className="h-11"
+                            onClick={() => removeClass(c.id)}
+                          >
+                            Remover
+                          </Button>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-muted-foreground" htmlFor={`ideal-${c.id}`}>
+                              % Ideal
+                            </Label>
+                            <div className="mt-2">
+                              <PercentInput
+                                value={c.idealPct}
+                                onChange={(next) => updateClass(c.id, { idealPct: next })}
+                                ariaLabel={`Percentual ideal ${c.name || "classe"}`}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground" htmlFor={`current-${c.id}`}>
+                              % Atual
+                            </Label>
+                            <div className="mt-2">
+                              <PercentInput
+                                value={c.currentPct}
+                                onChange={(next) => updateClass(c.id, { currentPct: next })}
+                                ariaLabel={`Percentual atual ${c.name || "classe"}`}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={Boolean(c.ignore)}
+                              onCheckedChange={(checked) =>
+                                updateClass(c.id, { ignore: checked === true })
+                              }
+                              aria-label={`Ignorar ${c.name || "classe"}`}
+                            />
+                            <span className="text-sm text-muted-foreground">Ignorar</span>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground">Quanto aportar</div>
+                            <div className="text-base font-semibold">
+                              {c.ignore ? "—" : formatBRL(amount)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Desktop: tabela sem necessidade de scroll horizontal */}
+              <div className="hidden md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Classe</TableHead>
-                      <TableHead>% Ideal</TableHead>
-                      <TableHead>% Atual</TableHead>
-                      <TableHead className="text-center">Ignorar</TableHead>
-                      <TableHead className="text-right">Quanto aportar</TableHead>
-                      <TableHead className="text-right"></TableHead>
+                      <TableHead className="w-80">Classe</TableHead>
+                      <TableHead className="w-35">% Ideal</TableHead>
+                      <TableHead className="w-35">% Atual</TableHead>
+                      <TableHead className="w-22.5 text-center">Ignorar</TableHead>
+                      <TableHead className="w-42.5 text-right">Quanto aportar</TableHead>
+                      <TableHead className="w-30 text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {state.classes.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
+                        <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                           Adicione uma classe para começar.
                         </TableCell>
                       </TableRow>
@@ -199,57 +331,43 @@ export function Dashboard() {
                         const amount = amountById.get(c.id) ?? 0;
                         return (
                           <TableRow key={c.id}>
-                            <TableCell className="min-w-55">
+                            <TableCell>
                               <Input
                                 value={c.name}
-                                placeholder="Ações do Brasil"
+                                placeholder="Ex.: Ações do Brasil"
                                 onChange={(e) => updateClass(c.id, { name: e.target.value })}
                               />
                             </TableCell>
-                            <TableCell className="min-w-35">
-                              <Input
-                                type="number"
-                                value={String(c.idealPct)}
-                                min={0}
-                                step={0.01}
-                                onChange={(e) =>
-                                  updateClass(c.id, {
-                                    idealPct: Number(e.target.value || 0),
-                                  })
-                                }
+                            <TableCell>
+                              <PercentInput
+                                value={c.idealPct}
+                                onChange={(next) => updateClass(c.id, { idealPct: next })}
+                                ariaLabel={`Percentual ideal ${c.name || "classe"}`}
                               />
                             </TableCell>
-                            <TableCell className="min-w-35">
-                              <Input
-                                type="number"
-                                value={String(c.currentPct)}
-                                min={0}
-                                step={0.01}
-                                onChange={(e) =>
-                                  updateClass(c.id, {
-                                    currentPct: Number(e.target.value || 0),
-                                  })
-                                }
+                            <TableCell>
+                              <PercentInput
+                                value={c.currentPct}
+                                onChange={(next) => updateClass(c.id, { currentPct: next })}
+                                ariaLabel={`Percentual atual ${c.name || "classe"}`}
                               />
                             </TableCell>
                             <TableCell className="text-center">
                               <Checkbox
                                 checked={Boolean(c.ignore)}
                                 onCheckedChange={(checked) =>
-                                  updateClass(c.id, {
-                                    ignore: checked === true,
-                                  })
+                                  updateClass(c.id, { ignore: checked === true })
                                 }
                                 aria-label={`Ignorar ${c.name || "classe"}`}
                               />
                             </TableCell>
-                            <TableCell className="text-right font-semibold">
+                            <TableCell className="text-right font-semibold tabular-nums">
                               {c.ignore ? "—" : formatBRL(amount)}
                             </TableCell>
                             <TableCell className="text-right">
                               <Button
                                 variant="outline"
-                                className="h-9 px-3"
+                                className="h-9 px-3 hover:text-red-500"
                                 onClick={() => removeClass(c.id)}
                               >
                                 Remover
@@ -264,11 +382,12 @@ export function Dashboard() {
               </div>
 
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div className="text-sm text-muted-foreground">
-                  Usado do aporte: <span className="text-foreground">{formatBRL(calc.usedTotal)}</span>
-                  <span className="ml-3 text-warning">
-                    Sobra: {formatBRL(calc.leftover)}
-                  </span>
+                <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Usado do aporte:</span>{" "}
+                  <span className="font-semibold tabular-nums">{formatBRL(calc.usedTotal)}</span>
+                  <span className="mx-2 text-muted-foreground">•</span>
+                  <span className="text-muted-foreground">Sobra:</span>{" "}
+                  <span className="font-semibold text-warning tabular-nums">{formatBRL(calc.leftover)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">Free: até {FREE_MAX_CLASSES} classes</Badge>
@@ -294,7 +413,7 @@ export function Dashboard() {
             <CardHeader>
               <CardTitle>Como funciona</CardTitle>
               <CardDescription>
-                Igual à planilha: calcula o déficit em R$ de cada classe após o aporte.
+                Calcula o déficit em R$ de cada classe após o aporte.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">

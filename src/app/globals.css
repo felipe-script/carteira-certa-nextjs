@@ -101,6 +101,10 @@
   --sidebar-ring: #22d3ee;
 }
 
+button {
+  @apply cursor-pointer;
+}
+
 .dark {
   --background: #0b1220;
   --foreground: #e5e7eb;
