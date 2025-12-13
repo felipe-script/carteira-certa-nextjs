@@ -41,15 +41,38 @@ function newClassRow(): AllocationClass {
 }
 
 function parseNumberBR(input: string): number {
-  // aceita "1.234,56" e "1234.56" e também "25,00%"
-  const cleaned = input
-    .trim()
-    .replace(/R\$\s?/gi, "")
-    .replace(/%/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-  const n = Number(cleaned);
+  // aceita "1.234,56", "1234,56", "1234.56" e também "25,00%"
+  const raw = input.trim().replace(/R\$\s?/gi, "").replace(/%/g, "");
+
+  const hasComma = raw.includes(",");
+  const hasDot = raw.includes(".");
+
+  // Se vier no formato pt-BR com milhar e decimal (1.234,56)
+  if (hasComma && hasDot) {
+    const normalized = raw.replace(/\./g, "").replace(",", ".");
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  // Se vier só com vírgula (1234,56)
+  if (hasComma) {
+    const normalized = raw.replace(",", ".");
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  // Se vier só com ponto (1234.56) ou inteiro
+  const n = Number(raw);
   return Number.isFinite(n) ? n : 0;
+}
+
+function formatNumberInputBR(value: number): string {
+  const n = Number.isFinite(value) ? value : 0;
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: false,
+  }).format(n);
 }
 
 function PercentInput(props: {
@@ -69,7 +92,7 @@ function PercentInput(props: {
         onChange={(e) => props.onChange(Number(e.target.value || 0))}
         aria-label={props.ariaLabel}
       />
-      <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
         %
       </span>
     </div>
@@ -80,9 +103,14 @@ export function Dashboard() {
   const [state, setState] = React.useState<StoredState>(() => getInitialState());
   const [hydrated, setHydrated] = React.useState(false);
   const [contribution, setContribution] = React.useState<string>("1500");
+  const [totalHaveInput, setTotalHaveInput] = React.useState<string>(() =>
+    formatNumberInputBR(getInitialState().totalHave ?? 0)
+  );
 
   React.useEffect(() => {
-    setState(loadState());
+    const loaded = loadState();
+    setState(loaded);
+    setTotalHaveInput(formatNumberInputBR(loaded.totalHave ?? 0));
     setHydrated(true);
   }, []);
 
@@ -166,13 +194,15 @@ export function Dashboard() {
                       id="totalHave"
                       inputMode="decimal"
                       placeholder="Ex.: 9019,12"
-                      value={String(state.totalHave ?? 0)}
-                      onChange={(e) =>
+                      value={totalHaveInput}
+                      onChange={(e) => {
+                        const nextText = e.target.value;
+                        setTotalHaveInput(nextText);
                         setState((s) => ({
                           ...s,
-                          totalHave: parseNumberBR(e.target.value),
-                        }))
-                      }
+                          totalHave: parseNumberBR(nextText),
+                        }));
+                      }}
                     />
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">
@@ -312,7 +342,7 @@ export function Dashboard() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-80">Classe</TableHead>
-                      <TableHead className="w-35">% Ideal</TableHead>
+                      <TableHead className="w-30">% Ideal</TableHead>
                       <TableHead className="w-35">% Atual</TableHead>
                       <TableHead className="w-22.5 text-center">Ignorar</TableHead>
                       <TableHead className="w-42.5 text-right">Quanto aportar</TableHead>
