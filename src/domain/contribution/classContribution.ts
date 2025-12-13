@@ -8,6 +8,14 @@ function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+function toCents(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100);
+}
+
+function fromCents(cents: number): number {
+  return Math.round((cents + Number.EPSILON)) / 100;
+}
+
 function safeNumber(value: number): number {
   return Number.isFinite(value) ? value : 0;
 }
@@ -31,6 +39,49 @@ function normalizeIdeals(classes: AllocationClass[]) {
   return { sumIdeal, normalizedIdealById };
 }
 
+function allocateCentsByWeights<T extends { id: ClassId; weight: number }>(
+  totalCents: number,
+  items: T[]
+): Map<ClassId, number> {
+  const allocation = new Map<ClassId, number>();
+  if (totalCents <= 0 || items.length === 0) return allocation;
+
+  const weightSum = items.reduce((sum, i) => sum + Math.max(0, safeNumber(i.weight)), 0);
+  if (weightSum <= 0) return allocation;
+
+  const rows = items.map((i) => {
+    const w = Math.max(0, safeNumber(i.weight));
+    const raw = (totalCents * w) / weightSum;
+    const floored = Math.floor(raw);
+    return {
+      id: i.id,
+      raw,
+      floored,
+      frac: raw - floored,
+    };
+  });
+
+  const sumFloors = rows.reduce((sum, r) => sum + r.floored, 0);
+  let remainder = totalCents - sumFloors;
+
+  // Distribui os centavos restantes para as maiores frações.
+  rows.sort((a, b) => b.frac - a.frac);
+
+  for (const r of rows) {
+    allocation.set(r.id, r.floored);
+  }
+
+  let idx = 0;
+  while (remainder > 0 && rows.length > 0) {
+    const id = rows[idx % rows.length]!.id;
+    allocation.set(id, (allocation.get(id) ?? 0) + 1);
+    remainder -= 1;
+    idx += 1;
+  }
+
+  return allocation;
+}
+
 /**
  * Modelo tipo planilha:
  * - Usuário informa total atual ("quanto tenho")
@@ -47,6 +98,10 @@ export function calculateClassContribution(input: {
   const totalHave = roundMoney(Math.max(0, safeNumber(input.totalHave)));
   const contribution = roundMoney(Math.max(0, safeNumber(input.contribution)));
   const totalAfter = roundMoney(totalHave + contribution);
+
+  const totalHaveCents = toCents(totalHave);
+  const contributionCents = toCents(contribution);
+  const totalAfterCents = toCents(totalAfter);
 
   const classes = input.classes
     .map((c) => ({
@@ -96,13 +151,23 @@ export function calculateClassContribution(input: {
   const currentAmountById = new Map<ClassId, number>();
   const desiredAmountById = new Map<ClassId, number>();
 
-  for (const c of active) {
-    const currentAmount = roundMoney(totalHave * (c.currentPct / 100));
-    currentAmountById.set(c.id, currentAmount);
+  // Importante: alocar em centavos garantindo que a soma feche exatamente
+  // (evita somas como 1.500,70 ao arredondar linha a linha).
+  const currentAllocated = allocateCentsByWeights(
+    totalHaveCents,
+    active.map((c) => ({ id: c.id, weight: c.currentPct }))
+  );
+  const desiredAllocated = allocateCentsByWeights(
+    totalAfterCents,
+    active.map((c) => ({
+      id: c.id,
+      weight: normalizedIdealById.get(c.id) ?? 0,
+    }))
+  );
 
-    const idealPctNormalized = normalizedIdealById.get(c.id) ?? 0;
-    const desiredAmount = roundMoney(totalAfter * (idealPctNormalized / 100));
-    desiredAmountById.set(c.id, desiredAmount);
+  for (const c of active) {
+    currentAmountById.set(c.id, currentAllocated.get(c.id) ?? 0);
+    desiredAmountById.set(c.id, desiredAllocated.get(c.id) ?? 0);
   }
 
   const deficits = active.map((c) => {
@@ -111,34 +176,35 @@ export function calculateClassContribution(input: {
     return {
       id: c.id,
       name: c.name,
-      deficit: roundMoney(Math.max(0, desired - current)),
+      deficitCents: Math.max(0, desired - current),
       idealPctNormalized: normalizedIdealById.get(c.id) ?? 0,
     };
   });
 
-  const totalDeficit = roundMoney(deficits.reduce((sum, d) => sum + d.deficit, 0));
-  const planAmounts = new Map<ClassId, number>();
+  const totalDeficitCents = deficits.reduce((sum, d) => sum + d.deficitCents, 0);
+  const planAmountsCents = new Map<ClassId, number>();
 
-  if (totalDeficit <= 0) {
-    // já está no alvo (ou acima) -> distribuir conforme ideal
+  if (totalDeficitCents <= 0) {
+    // já está no alvo (ou acima) -> distribuir conforme ideal (normalizado)
+    const extra = allocateCentsByWeights(contributionCents, deficits.map((d) => ({ id: d.id, weight: d.idealPctNormalized })));
     for (const d of deficits) {
-      planAmounts.set(d.id, roundMoney(contribution * (d.idealPctNormalized / 100)));
+      planAmountsCents.set(d.id, extra.get(d.id) ?? 0);
     }
-  } else if (contribution <= totalDeficit) {
+  } else if (contributionCents <= totalDeficitCents) {
     // aporte não cobre todo déficit -> proporcional ao déficit
+    const byDeficit = allocateCentsByWeights(contributionCents, deficits.map((d) => ({ id: d.id, weight: d.deficitCents })));
     for (const d of deficits) {
-      const weight = d.deficit / totalDeficit;
-      planAmounts.set(d.id, roundMoney(contribution * weight));
+      planAmountsCents.set(d.id, byDeficit.get(d.id) ?? 0);
     }
   } else {
     // cobre o déficit + distribui sobra conforme ideal
     for (const d of deficits) {
-      planAmounts.set(d.id, d.deficit);
+      planAmountsCents.set(d.id, d.deficitCents);
     }
-    const remainder = roundMoney(contribution - totalDeficit);
+    const remainderCents = contributionCents - totalDeficitCents;
+    const extra = allocateCentsByWeights(remainderCents, deficits.map((d) => ({ id: d.id, weight: d.idealPctNormalized })));
     for (const d of deficits) {
-      const prev = planAmounts.get(d.id) ?? 0;
-      planAmounts.set(d.id, roundMoney(prev + remainder * (d.idealPctNormalized / 100)));
+      planAmountsCents.set(d.id, (planAmountsCents.get(d.id) ?? 0) + (extra.get(d.id) ?? 0));
     }
   }
 
@@ -146,13 +212,14 @@ export function calculateClassContribution(input: {
     .map((d) => ({
       classId: d.id,
       name: d.name,
-      amount: planAmounts.get(d.id) ?? 0,
+      amount: fromCents(planAmountsCents.get(d.id) ?? 0),
     }))
     .filter((r) => r.amount > 0)
     .sort((a, b) => b.amount - a.amount);
 
-  const usedTotal = roundMoney(recommendations.reduce((sum, r) => sum + r.amount, 0));
-  const leftover = roundMoney(contribution - usedTotal);
+  const usedTotalCents = recommendations.reduce((sum, r) => sum + toCents(r.amount), 0);
+  const usedTotal = fromCents(usedTotalCents);
+  const leftover = fromCents(contributionCents - usedTotalCents);
 
   return {
     totalHave,

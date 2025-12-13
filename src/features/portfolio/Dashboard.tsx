@@ -25,7 +25,7 @@ import { calculateClassContribution } from "@/domain/contribution/classContribut
 import type { AllocationClass } from "@/domain/contribution/types";
 
 import { formatBRL, formatPct } from "./format";
-import { loadState, saveState, type StoredState } from "./storage";
+import { getInitialState, loadState, saveState, type StoredState } from "./storage";
 
 const FREE_MAX_CLASSES = 10;
 
@@ -52,12 +52,19 @@ function parseNumberBR(input: string): number {
 }
 
 export function Dashboard() {
-  const [state, setState] = React.useState<StoredState>(() => loadState());
+  const [state, setState] = React.useState<StoredState>(() => getInitialState());
+  const [hydrated, setHydrated] = React.useState(false);
   const [contribution, setContribution] = React.useState<string>("1500");
 
   React.useEffect(() => {
+    setState(loadState());
+    setHydrated(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!hydrated) return;
     saveState(state);
-  }, [state]);
+  }, [hydrated, state]);
 
   const canAddClass = state.classes.length < FREE_MAX_CLASSES;
 

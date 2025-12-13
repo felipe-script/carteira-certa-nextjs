@@ -13,37 +13,42 @@ function defaultState(): StoredState {
     totalHave: 0,
     classes: [
       {
-        id: crypto.randomUUID(),
+        id: "renda-fixa",
         name: "Renda Fixa",
         idealPct: 25,
         currentPct: 0,
       },
       {
-        id: crypto.randomUUID(),
+        id: "acoes-br",
         name: "Ações do Brasil",
         idealPct: 25,
         currentPct: 0,
       },
       {
-        id: crypto.randomUUID(),
+        id: "fiis",
         name: "FIIs",
         idealPct: 25,
         currentPct: 0,
       },
       {
-        id: crypto.randomUUID(),
+        id: "acoes-eua",
         name: "Ações dos EUA",
         idealPct: 20,
         currentPct: 0,
       },
       {
-        id: crypto.randomUUID(),
+        id: "bitcoin",
         name: "Bitcoin",
         idealPct: 5,
         currentPct: 0,
       },
     ],
   };
+}
+
+export function getInitialState(): StoredState {
+  // Não depende de window/localStorage, nem de random.
+  return defaultState();
 }
 
 function migrateFromV1(): StoredState | null {
