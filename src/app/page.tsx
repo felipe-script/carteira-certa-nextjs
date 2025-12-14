@@ -32,7 +32,7 @@ export default function Home() {
 
       <footer className="border-t border-border">
         <div className="mx-auto w-full max-w-6xl px-6 py-5 text-xs text-muted-foreground">
-          MVP educacional. Não é recomendação de investimento.
+          Não é recomendação de investimento.
         </div>
       </footer>
     </div>
