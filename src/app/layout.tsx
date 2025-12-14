@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Carteira Certa",
   description:
-    "Rebalanceador inteligente para investidores buy and hold: descubra onde aportar sem vender ativos.",
+    "Rebalanceador inteligente para investidores buy and hold: descubra onde aportar na sua carteira para mantê-la alinhada aos seus objetivos.",
 };
 
 export default function RootLayout({
