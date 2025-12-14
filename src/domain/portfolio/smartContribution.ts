@@ -1,6 +1,11 @@
 import type { Asset, Money, SmartContributionResult } from "./types";
 import { assetValue, normalizeTargets, portfolioTotal, roundMoney } from "./math";
 
+/**
+ * Sanitiza símbolo/ticker:
+ * - trim
+ * - upper
+ */
 function safeSymbol(symbol: string): string {
   return symbol.trim().toUpperCase();
 }
@@ -17,6 +22,22 @@ export function calculateSmartContribution(input: {
   assets: Asset[];
   contribution: Money;
 }): SmartContributionResult {
+  /**
+   * Passo a passo (modelo por ATIVO — legado neste MVP):
+   *
+   * 1) Sanitiza inputs (remove NaN/negativos) e limpa símbolos.
+   * 2) Calcula o total atual da carteira (`totalBefore`).
+   * 3) Calcula o total pós-aporte (`totalAfterTarget = totalBefore + contribution`).
+   * 4) Normaliza os targets para somarem 100% e calcula, para cada ativo,
+   *    o valor ideal pós-aporte: desired = target% * totalAfterTarget.
+   * 5) Calcula o déficit por ativo: deficit = max(0, desired - currentValue).
+   * 6) Monta um plano em R$ (`planAmounts`):
+   *    - Se não há déficit: distribui o aporte pelo target (mantém proporção).
+   *    - Se o aporte não cobre o déficit total: distribui proporcional ao déficit.
+   *    - Se cobre: compra para cobrir déficits e distribui o restante pelo target.
+   * 7) Converte o plano (R$) em unidades inteiras (floor) com base no preço.
+   *    Isso pode gerar `leftover` (caixa) por arredondamento.
+   */
   const notes: string[] = [];
 
   const contribution = roundMoney(Math.max(0, input.contribution));
@@ -57,11 +78,13 @@ export function calculateSmartContribution(input: {
   const desiredById = new Map<string, Money>();
   const currentById = new Map<string, Money>();
 
+  // desiredById: valor ideal (R$) por ativo após o aporte
   for (const t of targets) {
     const desired = roundMoney((t.targetPct / 100) * totalAfterTarget);
     desiredById.set(t.id, desired);
   }
 
+  // currentById: valor atual (R$) por ativo
   for (const a of assets) {
     currentById.set(a.id, assetValue(a));
   }
