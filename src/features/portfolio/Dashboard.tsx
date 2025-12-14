@@ -27,8 +27,6 @@ import type { AllocationClass } from "@/domain/contribution/types";
 
 import { formatBRL, formatPct } from "./format";
 import { getInitialState, loadState, saveState, type StoredState } from "./storage";
-import { Check } from "lucide-react";
-import { InfoContribution } from "./components/info-contribution";
 import { FREE_MAX_CLASSES } from "@/consts/consts";
 import { PercentInput } from "./components/percent-input";
 
@@ -78,20 +76,28 @@ function formatNumberInputBR(value: number): string {
   }).format(n);
 }
 
-
+function maskCurrencyBR(nextText: string): { formatted: string; value: number } {
+  // Máscara simples: tudo que não for dígito é ignorado.
+  // O número digitado é interpretado como CENTAVOS.
+  // Ex.: "901912" -> R$ 9.019,12
+  const digits = nextText.replace(/\D/g, "");
+  const cents = digits.length > 0 ? Number(digits) : 0;
+  const value = Number.isFinite(cents) ? cents / 100 : 0;
+  return { formatted: formatBRL(value), value };
+}
 
 export function Dashboard() {
   const [state, setState] = React.useState<StoredState>(() => getInitialState());
   const [hydrated, setHydrated] = React.useState(false);
-  const [contribution, setContribution] = React.useState<string>("1500");
+  const [contribution, setContribution] = React.useState<string>(() => formatBRL(1500));
   const [totalHaveInput, setTotalHaveInput] = React.useState<string>(() =>
-    formatNumberInputBR(getInitialState().totalHave ?? 0)
+    formatBRL(getInitialState().totalHave ?? 0)
   );
 
   React.useEffect(() => {
     const loaded = loadState();
     setState(loaded);
-    setTotalHaveInput(formatNumberInputBR(loaded.totalHave ?? 0));
+    setTotalHaveInput(formatBRL(loaded.totalHave ?? 0));
     setHydrated(true);
   }, []);
 
@@ -139,32 +145,14 @@ export function Dashboard() {
   const amountById = new Map(calc.recommendations.map((r) => [r.classId, r.amount] as const));
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
-          <div className="space-y-1">
-            <h1 className="text-lg font-semibold leading-none flex items-center gap-2">Carteira Certa <Check className="text-green-400" size={14}/></h1>
-            <div className="text-sm text-muted-foreground">
-              Preencha os campos e veja quanto aportar.
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Badge variant="secondary">Free</Badge>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-6xl space-y-6 px-6 py-6">
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Rebalanceador por Classe</CardTitle>
-              <CardDescription>
-                Tudo aqui é editável (classe, % ideal, % atual, valores). Use “Ignorar” se não quer aportar naquela classe.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+    <Card className="md:col-span-2">
+      <CardHeader>
+        <CardTitle>Rebalanceador por Classe</CardTitle>
+        <CardDescription>
+          Tudo aqui é editável (classe, % ideal, % atual, valores). Use “Ignorar” se não quer aportar naquela classe.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-xl border border-border bg-card p-4">
                   <Label className="text-muted-foreground" htmlFor="totalHave">
@@ -173,16 +161,13 @@ export function Dashboard() {
                   <div className="mt-2">
                     <Input
                       id="totalHave"
-                      inputMode="decimal"
+                      inputMode="numeric"
                       placeholder="Ex.: 9019,12"
                       value={totalHaveInput}
                       onChange={(e) => {
-                        const nextText = e.target.value;
-                        setTotalHaveInput(nextText);
-                        setState((s) => ({
-                          ...s,
-                          totalHave: parseNumberBR(nextText),
-                        }));
+                        const { formatted, value } = maskCurrencyBR(e.target.value);
+                        setTotalHaveInput(formatted);
+                        setState((s) => ({ ...s, totalHave: value }));
                       }}
                     />
                   </div>
@@ -198,10 +183,13 @@ export function Dashboard() {
                   <div className="mt-2">
                     <Input
                       id="contribution"
-                      inputMode="decimal"
+                      inputMode="numeric"
                       placeholder="Ex.: 1500,00"
                       value={contribution}
-                      onChange={(e) => setContribution(e.target.value)}
+                      onChange={(e) => {
+                        const { formatted } = maskCurrencyBR(e.target.value);
+                        setContribution(formatted);
+                      }}
                     />
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">
@@ -414,17 +402,7 @@ export function Dashboard() {
                   </ul>
                 </div>
               )}
-            </CardContent>
-          </Card>
-          <InfoContribution/>
-        </div>
-      </main>
-
-      <footer className="border-t border-border">
-        <div className="mx-auto w-full max-w-6xl px-6 py-5 text-xs text-muted-foreground">
-          MVP educacional. Não é recomendação de investimento.
-        </div>
-      </footer>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
