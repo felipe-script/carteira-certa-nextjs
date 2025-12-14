@@ -29,8 +29,8 @@ import { formatBRL, formatPct } from "./format";
 import { getInitialState, loadState, saveState, type StoredState } from "./storage";
 import { Check } from "lucide-react";
 import { InfoContribution } from "./components/info-contribution";
+import { FREE_MAX_CLASSES } from "@/consts/consts";
 
-const FREE_MAX_CLASSES = 10;
 
 function newClassRow(): AllocationClass {
   return {
