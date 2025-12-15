@@ -1,19 +1,28 @@
 import { Badge } from "@/components/ui/badge";
 import { InfoContribution } from "@/features/portfolio/components/info-contribution";
 import { Dashboard } from "@/features/portfolio/Dashboard";
-import { Check } from "lucide-react";
+import Image from "next/image";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
-          <div className="space-y-1">
-            <h1 className="flex items-center gap-2 text-lg font-semibold leading-none">
-              Carteira Certa <Check className="text-green-400" size={14} />
-            </h1>
-            <div className="text-sm text-muted-foreground">
-              Preencha os campos e veja quanto aportar.
+          <div className="flex items-center gap-3">
+            <Image
+              src="/logo-carteira-certa-cropped.png"
+              alt="Carteira Certa"
+              width={80}
+              height={80}
+              priority
+              className="h-20 w-20 rounded-md bg-transparent object-contain"
+            />
+
+            <div className="space-y-1">
+              <h1 className="text-lg font-semibold leading-none">Carteira Certa</h1>
+              <div className="text-sm text-muted-foreground">
+                Seu próximo aporte, do jeito certo.
+              </div>
             </div>
           </div>
 
