@@ -247,7 +247,7 @@ export function Dashboard() {
 
                           <Button
                             variant="outline"
-                            className="h-11 text-red-400"
+                            className="h-11 text-red-400 hover:text-red-500"
                             onClick={() => removeClass(c.id)}
                           >
                             Remover
@@ -367,7 +367,7 @@ export function Dashboard() {
                             <TableCell className="text-right">
                               <Button
                                 variant="outline"
-                                className="h-9 px-3 text-red-400"
+                                className="h-9 px-3 text-red-400 hover:text-red-500"
                                 onClick={() => removeClass(c.id)}
                               >
                                 Remover
