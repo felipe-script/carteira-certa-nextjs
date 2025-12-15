@@ -29,6 +29,7 @@ import { formatBRL, formatPct } from "./format";
 import { getInitialState, loadState, saveState, type StoredState } from "./storage";
 import { FREE_MAX_CLASSES } from "@/consts/consts";
 import { PercentInput } from "./components/percent-input";
+import { cn } from "@/lib/utils";
 
 
 function newClassRow(): AllocationClass {
@@ -246,7 +247,7 @@ export function Dashboard() {
 
                           <Button
                             variant="outline"
-                            className="h-11"
+                            className="h-11 text-red-400"
                             onClick={() => removeClass(c.id)}
                           >
                             Remover
@@ -294,7 +295,7 @@ export function Dashboard() {
 
                           <div className="text-right">
                             <div className="text-xs text-muted-foreground">Quanto aportar</div>
-                            <div className="text-base font-semibold">
+                            <div className={cn("text-base font-semibold ", amount > 0 ? "text-success" : "text-warning")}>
                               {c.ignore ? "—" : formatBRL(amount)}
                             </div>
                           </div>
@@ -360,13 +361,13 @@ export function Dashboard() {
                                 aria-label={`Ignorar ${c.name || "classe"}`}
                               />
                             </TableCell>
-                            <TableCell className="text-right font-semibold tabular-nums">
+                            <TableCell className={cn("text-right font-semibold tabular-nums", amount > 0 ? "text-success" : "text-warning")}>
                               {c.ignore ? "—" : formatBRL(amount)}
                             </TableCell>
                             <TableCell className="text-right">
                               <Button
                                 variant="outline"
-                                className="h-9 px-3 hover:text-red-500"
+                                className="h-9 px-3 text-red-400"
                                 onClick={() => removeClass(c.id)}
                               >
                                 Remover
