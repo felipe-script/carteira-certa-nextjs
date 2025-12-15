@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { GoogleAnalytics } from '@next/third-parties/google'
-import Script from "next/script";
 
 import "./globals.css";
 
@@ -29,12 +28,6 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="dark">
       <head>
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5756217462879491"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
         <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png" />
         <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png" />
         <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png" />
