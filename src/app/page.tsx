@@ -40,8 +40,19 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto w-full max-w-6xl px-6 py-5 text-xs text-muted-foreground">
-          Não é recomendação de investimento.
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-6 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span>Não é recomendação de investimento.</span>
+          <span>
+            Desenvolvido por{" "} <span className="text-green-500 font-bold"> {" <>" } </span>
+            <a
+              href="https://linkedin.com/in/felipeluciano19"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-4 hover:text-foreground"
+            >
+              Felipe Luciano
+            </a>
+          </span>
         </div>
       </footer>
     </div>
