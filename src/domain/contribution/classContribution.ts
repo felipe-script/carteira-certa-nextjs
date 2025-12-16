@@ -198,23 +198,14 @@ export function calculateClassContribution(input: {
   const currentAmountById = new Map<ClassId, number>();
   const desiredAmountById = new Map<ClassId, number>();
 
-  // Importante: alocar em centavos garantindo que a soma feche exatamente
-  // (evita somas como 1.500,70 ao arredondar linha a linha).
-  const currentAllocated = allocateCentsByWeights(
-    totalHaveCents,
-    active.map((c) => ({ id: c.id, weight: c.currentPct }))
-  );
-  const desiredAllocated = allocateCentsByWeights(
-    totalAfterCents,
-    active.map((c) => ({
-      id: c.id,
-      weight: normalizedIdealById.get(c.id) ?? 0,
-    }))
-  );
-
+  // Calcula diretamente o valor atual e o desejado de cada classe, como na planilha:
+  // - Valor atual = totalHave × (currentPct / 100)
+  // - Valor desejado = totalAfter × (idealPct / 100) — usa o % ideal ORIGINAL (não normalizado)
   for (const c of active) {
-    currentAmountById.set(c.id, currentAllocated.get(c.id) ?? 0);
-    desiredAmountById.set(c.id, desiredAllocated.get(c.id) ?? 0);
+    const currentCents = Math.round(totalHaveCents * (c.currentPct / 100));
+    const desiredCents = Math.round(totalAfterCents * (c.idealPct / 100));
+    currentAmountById.set(c.id, currentCents);
+    desiredAmountById.set(c.id, desiredCents);
   }
 
   const deficits = active.map((c) => {
