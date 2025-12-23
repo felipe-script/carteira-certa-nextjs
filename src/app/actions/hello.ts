@@ -8,6 +8,6 @@ export async function getData() {
         throw new Error("DATABASE_URL environment variable is not defined.");
     }
     const sql = neon(databaseUrl);
-    const data = await sql`...`;
+    const data = await sql`SELECT NOW() as current_time`;
     return data;
 }

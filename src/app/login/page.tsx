@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -23,6 +24,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
+import { getData } from "@/app/actions/hello";
 
 const loginFormSchema = z.object({
     email: z
@@ -45,6 +47,17 @@ const LoginPage = () => {
             rememberMe: false,
         },
     });
+
+    useEffect(() => {
+        // Test getData on component mount
+        getData()
+            .then((data) => {
+                console.log("getData result:", data);
+            })
+            .catch((error) => {
+                console.error("getData error:", error);
+            });
+    }, []);
 
     const onSubmit = (data: LoginFormValues) => {
         // Handle login logic here
